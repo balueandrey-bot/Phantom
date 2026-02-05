@@ -54,6 +54,9 @@ fn load_or_generate_keypair(app_handle: &tauri::AppHandle) -> Result<identity::K
 
 fn load_or_generate_ecdh_key(app_handle: &tauri::AppHandle) -> Result<StaticSecret, Box<dyn Error>> {
     let app_data_dir = app_handle.path().app_data_dir()?;
+    if !app_data_dir.exists() {
+        fs::create_dir_all(&app_data_dir)?;
+    }
     let key_path = app_data_dir.join("ecdh.key");
 
     if key_path.exists() {
