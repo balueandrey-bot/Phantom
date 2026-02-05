@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { Sidebar } from "./components/Layout/Sidebar";
 import { ChatHeader } from "./components/Chat/ChatHeader";
 import { MessageList, Message } from "./components/Chat/MessageList";
@@ -52,6 +54,12 @@ function App() {
       await dbService.init();
       loadContacts();
       loadProfile();
+
+      // @ts-ignore
+      if (!window.__TAURI_INTERNALS__) {
+        console.warn("Tauri internals not found, skipping P2P initialization");
+        return;
+      }
 
       // Fetch initial listen addresses
       try {
@@ -156,6 +164,17 @@ function App() {
         setLocalPeerId("Браузерный режим (без P2P)");
         return;
     }
+
+    // Check for updates
+    check().then(async (update) => {
+        if (update?.available) {
+             const yes = await window.confirm(`Доступно обновление до версии ${update.version}.\nХотите скачать и установить сейчас?`);
+             if (yes) {
+                 await update.downloadAndInstall();
+                 await relaunch();
+             }
+        }
+    }).catch(e => console.error("Update check failed:", e));
 
     // Fetch initial local peer ID
     invoke<string>("get_local_peer_id")
